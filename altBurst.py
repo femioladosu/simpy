@@ -1,3 +1,5 @@
+import time
+from pprint import pprint
 
 import simpy
 import random
@@ -33,10 +35,15 @@ class GangScheduler:
         state = STATE_READY
         while bursts:
             burst_type, duration = bursts[0]
+            print(f'burst_type: {burst_type}')
+            print(f'duration: {duration}')
             if burst_type == 'CPU':
                 time_slice = min(self.processor_time_slices[processor_id], duration)
                 state = STATE_RUNNING
                 print(f'{self.env.now}: {name} state: {state} - requesting CPU for {time_slice} time units on processor {processor_id}')
+                time.sleep(2)
+                print('Scheduler Object: ------------')
+                pprint(vars(self))
                 with self.cpu.request() as req:
                     yield req
                     print(f'{self.env.now}: {name} state: {state} - got CPU on processor {processor_id}')
@@ -127,13 +134,14 @@ def setup_environment(env, num_gangs, cpu_capacity):
 
 def time_tick_scheduler(env, scheduler, gang_creation_processes):
     """Scheduler to handle task execution at each time tick."""
-    global completed_gangs
+    print('Time Tick...')
+    # global completed_gangs
     # Wait for all gangs to be created
     yield simpy.events.AllOf(env, gang_creation_processes)
     
     total_gangs = len(scheduler.gangs)
     print(f'Total gangs created: {total_gangs}')
-    
+    print(f'*Completed Gangs: {completed_gangs}*')
     while completed_gangs < total_gangs:  # Loop until all gangs are completed
         if scheduler.ready_queue.items:
             task_name, bursts, gang_id, processor_id = yield scheduler.ready_queue.get()
